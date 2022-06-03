@@ -7,7 +7,7 @@ use anchor_lang::prelude::*;
 use anchor_spl::token::{self, TokenAccount, Transfer};
 use std::convert::Into;
 
-declare_id!("HHjksYvXSfVnBuY9ECoBtHYDdkeBSyuLe5QAWn3VT55X");
+declare_id!("Fg6PaFpoGXkYsidMpWTK6W2BeZ7FEfcYkg476zPFsLnS");
 
 #[program]
 pub mod cashiers_check {
