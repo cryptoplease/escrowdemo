@@ -7,10 +7,10 @@ use anchor_lang::prelude::*;
 use anchor_spl::token::{self, TokenAccount, Transfer};
 use std::convert::Into;
 
-declare_id!("7atNimrSw3vtUyr54QXt5557rThYXwyAU2Xkf9XxP3gu");
+declare_id!("HadGeJ6KCGiyzVTe13n5TY1rCSEyd9Akgx7cYBvYx5Dt");
 
 #[program]
-pub mod cashiers_check {
+pub mod escrowdemo {
     use super::*;
 
     #[access_control(CreateCheck::accounts(&ctx, nonce))]
