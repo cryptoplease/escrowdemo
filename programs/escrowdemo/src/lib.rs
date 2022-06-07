@@ -31,22 +31,22 @@ pub mod escrowdemo {
         token::transfer(cpi_ctx, amount)?;
 
         // Print the check.
-        let check = &mut ctx.accounts.check;
-        check.amount = amount;
-        check.from = *ctx.accounts.from.to_account_info().key;
-        check.to = *ctx.accounts.to.to_account_info().key;
-        check.vault = *ctx.accounts.vault.to_account_info().key;
-        check.nonce = nonce;
-        check.memo = memo;
+        let escrow = &mut ctx.accounts.escrow;
+        escrow.amount = amount;
+        escrow.from = *ctx.accounts.from.to_account_info().key;
+        escrow.to = *ctx.accounts.to.to_account_info().key;
+        escrow.vault = *ctx.accounts.vault.to_account_info().key;
+        escrow.nonce = nonce;
+        escrow.memo = memo;
 
         Ok(())
     }
 
-    #[access_control(not_burned(&ctx.accounts.check))]
+    #[access_control(not_burned(&ctx.accounts.escrow))]
     pub fn cash_check(ctx: Context<CashCheck>) -> Result<()> {
         let seeds = &[
-            ctx.accounts.check.to_account_info().key.as_ref(),
-            &[ctx.accounts.check.nonce],
+            ctx.accounts.escrow.to_account_info().key.as_ref(),
+            &[ctx.accounts.escrow.nonce],
         ];
         let signer = &[&seeds[..]];
         let cpi_accounts = Transfer {
@@ -56,17 +56,17 @@ pub mod escrowdemo {
         };
         let cpi_program = ctx.accounts.token_program.clone();
         let cpi_ctx = CpiContext::new_with_signer(cpi_program, cpi_accounts, signer);
-        token::transfer(cpi_ctx, ctx.accounts.check.amount)?;
+        token::transfer(cpi_ctx, ctx.accounts.escrow.amount)?;
         // Burn the check for one time use.
-        ctx.accounts.check.burned = true;
+        ctx.accounts.escrow.burned = true;
         Ok(())
     }
 
-    #[access_control(not_burned(&ctx.accounts.check))]
+    #[access_control(not_burned(&ctx.accounts.escrow))]
     pub fn cancel_check(ctx: Context<CancelCheck>) -> Result<()> {
         let seeds = &[
-            ctx.accounts.check.to_account_info().key.as_ref(),
-            &[ctx.accounts.check.nonce],
+            ctx.accounts.escrow.to_account_info().key.as_ref(),
+            &[ctx.accounts.escrow.nonce],
         ];
         let signer = &[&seeds[..]];
         let cpi_accounts = Transfer {
@@ -76,8 +76,8 @@ pub mod escrowdemo {
         };
         let cpi_program = ctx.accounts.token_program.clone();
         let cpi_ctx = CpiContext::new_with_signer(cpi_program, cpi_accounts, signer);
-        token::transfer(cpi_ctx, ctx.accounts.check.amount)?;
-        ctx.accounts.check.burned = true;
+        token::transfer(cpi_ctx, ctx.accounts.escrow.amount)?;
+        ctx.accounts.escrow.burned = true;
         Ok(())
     }
 }
@@ -86,7 +86,7 @@ pub mod escrowdemo {
 pub struct CreateCheck<'info> {
     // Check being created.
     #[account(zero)]
-    check: Account<'info, Check>,
+    escrow: Account<'info, Escrow>,
     // Check's token vault.
     #[account(mut, constraint = &vault.owner == check_signer.key)]
     vault: Account<'info, TokenAccount>,
@@ -109,7 +109,7 @@ pub struct CreateCheck<'info> {
 impl<'info> CreateCheck<'info> {
     pub fn accounts(ctx: &Context<CreateCheck>, nonce: u8) -> Result<()> {
         let signer = Pubkey::create_program_address(
-            &[ctx.accounts.check.to_account_info().key.as_ref(), &[nonce]],
+            &[ctx.accounts.escrow.to_account_info().key.as_ref(), &[nonce]],
             ctx.program_id,
         )
         .map_err(|_| error!(ErrorCode::InvalidCheckNonce))?;
@@ -123,13 +123,13 @@ impl<'info> CreateCheck<'info> {
 #[derive(Accounts)]
 pub struct CashCheck<'info> {
     #[account(mut, has_one = vault, has_one = to)]
-    check: Account<'info, Check>,
+    escrow: Account<'info, Escrow>,
     #[account(mut)]
     /// CHECK: no check
     vault: AccountInfo<'info>,
     #[account(
-        seeds = [check.to_account_info().key.as_ref()],
-        bump = check.nonce,
+        seeds = [escrow.to_account_info().key.as_ref()],
+        bump = escrow.nonce,
     )]
     /// CHECK: no check
     check_signer: AccountInfo<'info>,
@@ -143,13 +143,13 @@ pub struct CashCheck<'info> {
 #[derive(Accounts)]
 pub struct CancelCheck<'info> {
     #[account(mut, has_one = vault, has_one = from)]
-    check: Account<'info, Check>,
+    escrow: Account<'info, Escrow>,
     #[account(mut)]
     /// CHECK: no check
     vault: AccountInfo<'info>,
     #[account(
-        seeds = [check.to_account_info().key.as_ref()],
-        bump = check.nonce,
+        seeds = [escrow.to_account_info().key.as_ref()],
+        bump = escrow.nonce,
     )]
     /// CHECK: no check
     check_signer: AccountInfo<'info>,
@@ -161,7 +161,7 @@ pub struct CancelCheck<'info> {
 }
 
 #[account]
-pub struct Check {
+pub struct Escrow {
     from: Pubkey,
     to: Pubkey,
     amount: u64,
@@ -170,6 +170,23 @@ pub struct Check {
     nonce: u8,
     burned: bool,
 }
+
+/*
+#[account]
+pub struct Escrow {
+    buyer: Pubkey,
+    seller: Pubkey,
+    amount: u64,
+    vault: Pubkey,
+    nonce: u8,
+    dao_fee: u64,
+    dao_fee_address: Pubkey,
+    dao_authority: Pubkey,
+    marketplace_fee: u64,
+    marketplace_fee_address: Pubkey,
+    status: u8, // switch to TradeStatus
+}
+*/
 
 #[error_code]
 pub enum ErrorCode {
@@ -181,8 +198,8 @@ pub enum ErrorCode {
     AlreadyBurned,
 }
 
-fn not_burned(check: &Check) -> Result<()> {
-    if check.burned {
+fn not_burned(escrow: &Escrow) -> Result<()> {
+    if escrow.burned {
         return err!(ErrorCode::AlreadyBurned);
     }
     Ok(())

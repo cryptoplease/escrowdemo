@@ -46,7 +46,7 @@ describe("cashiers-check", () => {
 
     await program.rpc.createCheck(new anchor.BN(100), "Hello world", nonce, {
       accounts: {
-        check: check.publicKey,
+        escrow: check.publicKey,
         vault: vault.publicKey,
         checkSigner,
         from: god,
@@ -57,7 +57,7 @@ describe("cashiers-check", () => {
       },
       signers: [check, vault],
       instructions: [
-        await program.account.check.createInstruction(check, 300),
+        await program.account.escrow.createInstruction(check, 300),
         ...(await serumCmn.createTokenAccountInstrs(
           program.provider,
           vault.publicKey,
@@ -67,7 +67,7 @@ describe("cashiers-check", () => {
       ],
     });
 
-    const checkAccount = await program.account.check.fetch(check.publicKey);
+    const checkAccount = await program.account.escrow.fetch(check.publicKey);
     assert.isTrue(checkAccount.from.equals(god));
     assert.isTrue(checkAccount.to.equals(receiver));
     assert.isTrue(checkAccount.amount.eq(new anchor.BN(100)));
@@ -86,7 +86,7 @@ describe("cashiers-check", () => {
   it("Cashes a check", async () => {
     await program.rpc.cashCheck({
       accounts: {
-        check: check.publicKey,
+        escrow: check.publicKey,
         vault: vault.publicKey,
         checkSigner: checkSigner,
         to: receiver,
@@ -95,7 +95,7 @@ describe("cashiers-check", () => {
       },
     });
 
-    const checkAccount = await program.account.check.fetch(check.publicKey);
+    const checkAccount = await program.account.escrow.fetch(check.publicKey);
     assert.isTrue(checkAccount.burned);
 
     let vaultAccount = await serumCmn.getTokenAccount(
