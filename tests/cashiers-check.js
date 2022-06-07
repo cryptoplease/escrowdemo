@@ -44,7 +44,7 @@ describe("cashiers-check", () => {
     );
     checkSigner = _checkSigner;
 
-    await program.rpc.createEscrow(new anchor.BN(100), "Hello world", nonce, {
+    await program.rpc.createEscrow(new anchor.BN(100), nonce, {
       accounts: {
         escrow: check.publicKey,
         vault: vault.publicKey,
@@ -71,7 +71,6 @@ describe("cashiers-check", () => {
     assert.isTrue(checkAccount.from.equals(god));
     assert.isTrue(checkAccount.to.equals(receiver));
     assert.isTrue(checkAccount.amount.eq(new anchor.BN(100)));
-    assert.strictEqual(checkAccount.memo, "Hello world");
     assert.isTrue(checkAccount.vault.equals(vault.publicKey));
     assert.strictEqual(checkAccount.nonce, nonce);
     assert.isFalse(checkAccount.burned);

@@ -17,7 +17,6 @@ pub mod escrowdemo {
     pub fn create_escrow(
         ctx: Context<CreateEscrow>,
         amount: u64,
-        memo: Option<String>,
         nonce: u8,
     ) -> Result<()> {
         // Transfer funds to the escrow.
@@ -37,7 +36,6 @@ pub mod escrowdemo {
         escrow.to = *ctx.accounts.to.to_account_info().key;
         escrow.vault = *ctx.accounts.vault.to_account_info().key;
         escrow.nonce = nonce;
-        escrow.memo = memo;
 
         Ok(())
     }
@@ -165,7 +163,6 @@ pub struct Escrow {
     from: Pubkey,
     to: Pubkey,
     amount: u64,
-    memo: Option<String>,
     vault: Pubkey,
     nonce: u8,
     burned: bool,
