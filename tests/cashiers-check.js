@@ -35,23 +35,23 @@ describe("cashiers-check", () => {
   const check = anchor.web3.Keypair.generate();
   const vault = anchor.web3.Keypair.generate();
 
-  let checkSigner = null;
+  let escrowSigner = null;
 
   it("Creates an escrow!", async () => {
-    let [_checkSigner, nonce] = await anchor.web3.PublicKey.findProgramAddress(
+    let [_escrowSigner, nonce] = await anchor.web3.PublicKey.findProgramAddress(
       [check.publicKey.toBuffer()],
       program.programId
     );
-    checkSigner = _checkSigner;
+    escrowSigner = _escrowSigner;
 
     await program.rpc.createEscrow(new anchor.BN(100), nonce, {
       accounts: {
         escrow: check.publicKey,
         vault: vault.publicKey,
-        checkSigner,
-        from: god,
-        to: receiver,
-        owner: program.provider.wallet.publicKey,
+        escrowSigner,
+        sellerToken: god,
+        buyerToken: receiver,
+        seller: program.provider.wallet.publicKey,
         tokenProgram: TOKEN_PROGRAM_ID,
         rent: anchor.web3.SYSVAR_RENT_PUBKEY,
       },
@@ -62,14 +62,14 @@ describe("cashiers-check", () => {
           program.provider,
           vault.publicKey,
           mint,
-          checkSigner
+          escrowSigner
         )),
       ],
     });
 
     const checkAccount = await program.account.escrow.fetch(check.publicKey);
-    assert.isTrue(checkAccount.from.equals(god));
-    assert.isTrue(checkAccount.to.equals(receiver));
+    assert.isTrue(checkAccount.sellerToken.equals(god));
+    assert.isTrue(checkAccount.buyerToken.equals(receiver));
     assert.isTrue(checkAccount.amount.eq(new anchor.BN(100)));
     assert.isTrue(checkAccount.vault.equals(vault.publicKey));
     assert.strictEqual(checkAccount.nonce, nonce);
@@ -87,9 +87,9 @@ describe("cashiers-check", () => {
       accounts: {
         escrow: check.publicKey,
         vault: vault.publicKey,
-        checkSigner: checkSigner,
-        to: receiver,
-        owner: program.provider.wallet.publicKey,
+        escrowSigner: escrowSigner,
+        buyerToken: receiver,
+        buyer: program.provider.wallet.publicKey,
         tokenProgram: TOKEN_PROGRAM_ID,
       },
     });

@@ -21,9 +21,9 @@ pub mod escrowdemo {
     ) -> Result<()> {
         // Transfer funds to the escrow.
         let cpi_accounts = Transfer {
-            from: ctx.accounts.from.to_account_info().clone(),
+            from: ctx.accounts.seller_token.to_account_info().clone(),
             to: ctx.accounts.vault.to_account_info().clone(),
-            authority: ctx.accounts.owner.clone(),
+            authority: ctx.accounts.seller.clone(),
         };
         let cpi_program = ctx.accounts.token_program.clone();
         let cpi_ctx = CpiContext::new(cpi_program, cpi_accounts);
@@ -32,8 +32,9 @@ pub mod escrowdemo {
         // Print the escrow.
         let escrow = &mut ctx.accounts.escrow;
         escrow.amount = amount;
-        escrow.from = *ctx.accounts.from.to_account_info().key;
-        escrow.to = *ctx.accounts.to.to_account_info().key;
+        escrow.seller = *ctx.accounts.seller.to_account_info().key;
+        escrow.seller_token = *ctx.accounts.seller_token.to_account_info().key;
+        escrow.buyer_token = *ctx.accounts.buyer_token.to_account_info().key;
         escrow.vault = *ctx.accounts.vault.to_account_info().key;
         escrow.nonce = nonce;
 
@@ -49,8 +50,8 @@ pub mod escrowdemo {
         let signer = &[&seeds[..]];
         let cpi_accounts = Transfer {
             from: ctx.accounts.vault.to_account_info().clone(),
-            to: ctx.accounts.to.to_account_info().clone(),
-            authority: ctx.accounts.check_signer.clone(),
+            to: ctx.accounts.buyer_token.to_account_info().clone(),
+            authority: ctx.accounts.escrow_signer.clone(),
         };
         let cpi_program = ctx.accounts.token_program.clone();
         let cpi_ctx = CpiContext::new_with_signer(cpi_program, cpi_accounts, signer);
@@ -59,7 +60,7 @@ pub mod escrowdemo {
         ctx.accounts.escrow.burned = true;
         Ok(())
     }
-
+/* Put in Comment CanCheck action
     #[access_control(not_burned(&ctx.accounts.escrow))]
     pub fn cancel_check(ctx: Context<CancelCheck>) -> Result<()> {
         let seeds = &[
@@ -78,6 +79,8 @@ pub mod escrowdemo {
         ctx.accounts.escrow.burned = true;
         Ok(())
     }
+*/
+
 }
 
 #[derive(Accounts)]
@@ -86,20 +89,20 @@ pub struct CreateEscrow<'info> {
     #[account(zero)]
     escrow: Account<'info, Escrow>,
     // Check's token vault.
-    #[account(mut, constraint = &vault.owner == check_signer.key)]
+    #[account(mut, constraint = &vault.owner == escrow_signer.key)]
     vault: Account<'info, TokenAccount>,
     // Program derived address for the check.
     /// CHECK: no check
-    check_signer: AccountInfo<'info>,
+    escrow_signer: AccountInfo<'info>,
     // Token account the check is made from.
-    #[account(mut, has_one = owner)]
-    from: Account<'info, TokenAccount>,
+    #[account(mut, constraint = &seller_token.owner == seller.key)]
+    seller_token: Account<'info, TokenAccount>,
     // Token account the check is made to.
-    #[account(constraint = from.mint == to.mint)]
-    to: Account<'info, TokenAccount>,
+    #[account(constraint = seller_token.mint == buyer_token.mint)]
+    buyer_token: Account<'info, TokenAccount>,
     // Owner of the `from` token account.
     /// CHECK: no check
-    owner: AccountInfo<'info>,
+    seller: AccountInfo<'info>,
     /// CHECK: no check
     token_program: AccountInfo<'info>,
 }
@@ -111,7 +114,7 @@ impl<'info> CreateEscrow<'info> {
             ctx.program_id,
         )
         .map_err(|_| error!(ErrorCode::InvalidCheckNonce))?;
-        if &signer != ctx.accounts.check_signer.to_account_info().key {
+        if &signer != ctx.accounts.escrow_signer.to_account_info().key {
             return err!(ErrorCode::InvalidCheckSigner);
         }
         Ok(())
@@ -120,7 +123,7 @@ impl<'info> CreateEscrow<'info> {
 
 #[derive(Accounts)]
 pub struct CashCheck<'info> {
-    #[account(mut, has_one = vault, has_one = to)]
+    #[account(mut, has_one = vault, has_one = buyer_token)]
     escrow: Account<'info, Escrow>,
     #[account(mut)]
     /// CHECK: no check
@@ -130,14 +133,15 @@ pub struct CashCheck<'info> {
         bump = escrow.nonce,
     )]
     /// CHECK: no check
-    check_signer: AccountInfo<'info>,
-    #[account(mut, has_one = owner)]
-    to: Account<'info, TokenAccount>,
-    owner: Signer<'info>,
+    escrow_signer: AccountInfo<'info>,
+    #[account(mut,  constraint = &buyer_token.owner == buyer.key)]
+    buyer_token: Account<'info, TokenAccount>,
+    buyer: Signer<'info>,
     /// CHECK: no check
     token_program: AccountInfo<'info>,
 }
 
+/* Put in Comment CanCheck action
 #[derive(Accounts)]
 pub struct CancelCheck<'info> {
     #[account(mut, has_one = vault, has_one = from)]
@@ -157,11 +161,13 @@ pub struct CancelCheck<'info> {
     /// CHECK: no chck
     token_program: AccountInfo<'info>,
 }
+*/
 
 #[account]
 pub struct Escrow {
-    from: Pubkey,
-    to: Pubkey,
+    seller: Pubkey,
+    seller_token: Pubkey,
+    buyer_token: Pubkey,
     amount: u64,
     vault: Pubkey,
     nonce: u8,
