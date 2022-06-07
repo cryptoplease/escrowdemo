@@ -20,7 +20,7 @@ pub mod escrowdemo {
         memo: Option<String>,
         nonce: u8,
     ) -> Result<()> {
-        // Transfer funds to the check.
+        // Transfer funds to the escrow.
         let cpi_accounts = Transfer {
             from: ctx.accounts.from.to_account_info().clone(),
             to: ctx.accounts.vault.to_account_info().clone(),
@@ -30,7 +30,7 @@ pub mod escrowdemo {
         let cpi_ctx = CpiContext::new(cpi_program, cpi_accounts);
         token::transfer(cpi_ctx, amount)?;
 
-        // Print the check.
+        // Print the escrow.
         let escrow = &mut ctx.accounts.escrow;
         escrow.amount = amount;
         escrow.from = *ctx.accounts.from.to_account_info().key;
