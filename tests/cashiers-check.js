@@ -44,7 +44,7 @@ describe("cashiers-check", () => {
     );
     checkSigner = _checkSigner;
 
-    await program.rpc.createCheck(new anchor.BN(100), "Hello world", nonce, {
+    await program.rpc.createEscrow(new anchor.BN(100), "Hello world", nonce, {
       accounts: {
         escrow: check.publicKey,
         vault: vault.publicKey,

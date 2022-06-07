@@ -13,9 +13,9 @@ declare_id!("HadGeJ6KCGiyzVTe13n5TY1rCSEyd9Akgx7cYBvYx5Dt");
 pub mod escrowdemo {
     use super::*;
 
-    #[access_control(CreateCheck::accounts(&ctx, nonce))]
-    pub fn create_check(
-        ctx: Context<CreateCheck>,
+    #[access_control(CreateEscrow::accounts(&ctx, nonce))]
+    pub fn create_escrow(
+        ctx: Context<CreateEscrow>,
         amount: u64,
         memo: Option<String>,
         nonce: u8,
@@ -83,7 +83,7 @@ pub mod escrowdemo {
 }
 
 #[derive(Accounts)]
-pub struct CreateCheck<'info> {
+pub struct CreateEscrow<'info> {
     // Check being created.
     #[account(zero)]
     escrow: Account<'info, Escrow>,
@@ -106,8 +106,8 @@ pub struct CreateCheck<'info> {
     token_program: AccountInfo<'info>,
 }
 
-impl<'info> CreateCheck<'info> {
-    pub fn accounts(ctx: &Context<CreateCheck>, nonce: u8) -> Result<()> {
+impl<'info> CreateEscrow<'info> {
+    pub fn accounts(ctx: &Context<CreateEscrow>, nonce: u8) -> Result<()> {
         let signer = Pubkey::create_program_address(
             &[ctx.accounts.escrow.to_account_info().key.as_ref(), &[nonce]],
             ctx.program_id,
